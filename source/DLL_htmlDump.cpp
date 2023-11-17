@@ -41,7 +41,10 @@ void genGraphDump(List* list)
         logNodeName(list, i);
         log(" -> ");
         logNodeName(list, list->next[i]);
-        log(" [color = \"%s\", weight = 0]\n", NXT_CLR);
+        const char* clr = NXT_CLR;
+        if (list->prev[i] == DLL_PREV_POISON)
+            clr = FRE_CLR;
+        log(" [color = \"%s\", weight = 0]\n", clr);
     }
     log("\n");
 

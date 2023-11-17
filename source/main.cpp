@@ -1,12 +1,11 @@
 #include "../include/DLL.h"
 #include "../include/DLL_htmlDump.h"
-#include "../lib/parseArgs/parseArgs.h"
+#include "../lib/include/parseArgs.h"
 
 
 int main(int argc, char** argv)
 {
     const char* logFileName = NULL;
-
     StrArgument strArgs[] = 
     {
         {"-o", "log_file", "The file all logs will be written to", &logFileName, false},
@@ -30,18 +29,19 @@ int main(int argc, char** argv)
     }
 
     listConstuctor(&list, logFile);
-    // listPushBack(&list, 50);
-    // listPushBack(&list, 60);
-    // listPushBack(&list, 70);
-    // listPushBack(&list, 80);
-    // listPushBack(&list, 90);
-    // listPushFront(&list, 40);
-    for (int i = 0; i < 50; i++)
+
+    for (int i = 0; i < 15; i++)
     {
-        // listPushBack(&list, i);
+        listPushBack(&list, i);
     }
-    listChangeCapacity(&list, 3.0f);
-    listInsertBefore(&list, 1, 15);
+    for (int i = 0; i < 15; i++)
+    {
+        listPushFront(&list, i);
+    }
+
+    listDelete(&list, 5);
+    listLinearize(&list);
+
     genGraphDump(&list);
-    // listDestructor(&list);
+    listDestructor(&list);
 }

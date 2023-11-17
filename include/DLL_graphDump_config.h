@@ -7,6 +7,7 @@ const char* const FLL_CLR = "#008888";
 const char* const NXT_CLR = "#0000FF";
 const char* const PRV_CLR = "#FF0000";
 const char* const HDR_CLR = "#FFFFFF";
+const char* const FRE_CLR = "#00FF00";  
 const int FONT_SIZE = 10;
 
 #endif

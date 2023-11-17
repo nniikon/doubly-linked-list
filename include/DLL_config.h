@@ -6,7 +6,7 @@ const unsigned int DLL_DEFAULT_CAPACITY = 8;
 const float DLL_CAPACITY_MULTIPLIER = 2.0f;
 
 const int DLL_PREV_POISON = -666;
-const int DLL_DATA_POISON = __INT_MAX__;
+const int DLL_DATA_POISON = -3565;
 
 typedef int elem_t;
 #define ELEM_FORMAT "%d"

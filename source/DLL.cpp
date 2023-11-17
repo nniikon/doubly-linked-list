@@ -1,7 +1,7 @@
 #include "../include/DLL.h"
 
 #define DUMP_DEBUG
-#include "../lib/dump.h"
+#include "../lib/include/dump.h"
 
 const char *const DLL_ERROR_MSG[] =
 {
@@ -33,6 +33,13 @@ const char *const DLL_ERROR_MSG[] =
     #define LIST_VERIFY_DUMP_RETURN_ERROR(list) do {} while(0)
 #endif
 
+static bool isInCorrectRange(List* list, int var)
+{
+    if (var < -1 || var >= (int) list->listInfo.capacity)
+        return false;
+    return true;
+}
+
 
 DLL_Error listVerify(List* list)
 {
@@ -41,14 +48,47 @@ DLL_Error listVerify(List* list)
     if (list->prev == NULL)  DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_PREV_ARRAY_PASSED);
     if (list->next == NULL)  DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_NEXT_ARRAY_PASSED);
 
-    if (list->prev[-1] == INT32_MAX || list->prev[-1] >= list->listInfo.capacity)
-        DUMP_AND_RETURN_ERROR(DLL_ERR_INVALID_HEAD_INDEX);
+    if (!isInCorrectRange(list, list->prev[-1]))
+        return DLL_ERR_INVALID_HEAD_INDEX;
 
-    if (list->next[-1] == INT32_MAX || list->next[-1] >= list->listInfo.capacity)
-        DUMP_AND_RETURN_ERROR(DLL_ERR_INVALID_TAIL_INDEX);
+    if (!isInCorrectRange(list, list->next[-1]))
+        return DLL_ERR_INVALID_TAIL_INDEX;
 
-    if (list->free == INT32_MAX || list->free >= list->listInfo.capacity)
-        DUMP_AND_RETURN_ERROR(DLL_ERR_INVALID_FREE_INDEX);
+    if (!isInCorrectRange(list, list->free))
+        return DLL_ERR_INVALID_FREE_INDEX;
+
+    return DLL_ERR_OK;
+}
+
+
+static DLL_Error allocListMem(elem_t** data, int** prev, int** next, unsigned int capacity)
+{
+    DUMP_PRINT("allocListMem() started\n");
+
+    *data = (elem_t*) calloc(sizeof(data[0]), capacity + 1);
+    if (data == NULL)
+    {
+        DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
+    }
+
+    *prev = (int*) calloc(sizeof(prev[0]), capacity + 1);
+    if (prev == NULL)
+    {
+        free(data);
+        DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
+    }
+
+    *next = (int*) calloc(sizeof(next[0]), capacity + 1);
+    if (next == NULL)
+    {
+        free(data);
+        free(prev);
+        DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
+    }
+
+    (*data)++;
+    (*prev)++;
+    (*next)++;
 
     return DLL_ERR_OK;
 }
@@ -65,35 +105,15 @@ DLL_Error listConstuctor_internal(List* list, FILE* logFile, DLL_InitInfo info)
 
     list->logFile = logFile;
 
-    list->data = (elem_t*) calloc(sizeof(list->data[0]), DLL_DEFAULT_CAPACITY + 1);
-    if (list->data == NULL)
-    {
-        DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
-    }
-    list->data++;
-
-    list->prev = (int*) calloc(sizeof(list->prev[0]), DLL_DEFAULT_CAPACITY + 1);
-    if (list->prev == NULL)
-    {
-        free(list->data);
-        DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
-    }
-    list->prev++;
-
-    list->next = (int*) calloc(sizeof(list->next[0]), DLL_DEFAULT_CAPACITY + 1);
-    if (list->next == NULL)
-    {
-        free(list->data);
-        free(list->prev);
-        DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
-    }
-    list->next++;
+    if (allocListMem(&list->data, &list->prev, &list->next, DLL_DEFAULT_CAPACITY) != DLL_ERR_OK)
+        return DLL_ERR_MEMORY_ALLOCATION_FAILURE;
 
     // Fill in arrays with info.
     for (unsigned int i = 0; i < DLL_DEFAULT_CAPACITY; i++)
     {
+        list->data[i] = DLL_DATA_POISON;
         list->prev[i] = DLL_PREV_POISON;
-        list->next[i] = i + 1;
+        list->next[i] = (int) i + 1;
     }
     // Loop the next[] array.
     list->next[DLL_DEFAULT_CAPACITY - 1] = -1; 
@@ -106,7 +126,7 @@ DLL_Error listConstuctor_internal(List* list, FILE* logFile, DLL_InitInfo info)
     list->listInfo.size     = 0;
     list->listInfo.isSorted = true;
 
-    DUMP_PRINT("listConstuctor() success.\n.");
+    DUMP_PRINT("listConstuctor() success.\n");
     return DLL_ERR_OK;
 }
 
@@ -132,6 +152,33 @@ DLL_Error listDestructor(List* list)
 }
 
 
+DLL_Error listDelete(List* list, int index)
+{
+    DUMP_PRINT("listDelete(%d) started.\n", index);
+    if (list == NULL)
+        DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
+    if (index <= 0)
+        DUMP_AND_RETURN_ERROR(DLL_ERR_INVALID_INDEX_PASSED);
+    VERIFY_DUMP_RETURN_ERROR(list);
+
+    int indPrev = list->prev[index];
+    int indNext = list->next[index];
+
+    list->data[index] = DLL_DATA_POISON;
+    list->prev[index] = DLL_PREV_POISON;
+    list->next[index] = list->free;
+
+    list->free = index;
+
+    list->prev[indNext] = indPrev;
+    list->next[indPrev] = indNext;
+
+    list->listInfo.size--;
+
+    return DLL_ERR_OK;
+}
+
+
 DLL_Error listInsertAfter(List* list, int index, elem_t value)
 {
     DUMP_PRINT("listInsertAfter(%d, " ELEM_FORMAT ") started.\n", index, value);
@@ -139,10 +186,10 @@ DLL_Error listInsertAfter(List* list, int index, elem_t value)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
     VERIFY_DUMP_RETURN_ERROR(list);
 
-    int freeIndex = list->free;
-
-    if (freeIndex >= list->listInfo.capacity - 2)
+    if (list->free >= (int) list->listInfo.capacity - 1)
         listChangeCapacity(list, DLL_CAPACITY_MULTIPLIER);
+
+    int freeIndex = list->free;
 
     list->free = list->next[list->free];
     list->listInfo.size++;
@@ -160,7 +207,6 @@ DLL_Error listInsertAfter(List* list, int index, elem_t value)
         DUMP_VALUE("TAIL: %d\n", list->prev[-1]);
     }
 
-
     return DLL_ERR_OK;
 }
 
@@ -172,6 +218,11 @@ DLL_Error listInsertBefore(List* list, int index, elem_t value)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
     VERIFY_DUMP_RETURN_ERROR(list);
 
+    if (list->prev[index] == DLL_PREV_POISON)
+    {
+        DUMP_AND_RETURN_ERROR(DLL_ERR_ELEMENT_DOESNT_EXIST);
+        return DLL_ERR_ELEMENT_DOESNT_EXIST;
+    }
     return listInsertAfter(list, list->prev[index], value);
 }
 
@@ -184,7 +235,7 @@ DLL_Error listPushFront(List* list, elem_t value)
     VERIFY_DUMP_RETURN_ERROR(list);
 
     return listInsertAfter(list, -1, value);
-}   
+}
 
 
 DLL_Error listPushBack(List* list, elem_t value)
@@ -200,24 +251,24 @@ DLL_Error listPushBack(List* list, elem_t value)
 
 /*static*/ DLL_Error listChangeCapacity(List* list, float multiplier)
 {
-    DUMP_PRINT("listChangeCapacity() started.\n");
+    DUMP_PRINT("listChangeCapacity(%f) started.\n", multiplier);
 
-    int newCapacity = (int)((float) list->listInfo.capacity * multiplier);
+    unsigned int newCapacity = (unsigned int)((float) list->listInfo.capacity * multiplier);
 
-    elem_t* tempData = (elem_t*) calloc(sizeof(elem_t), newCapacity);
+    elem_t* tempData = (elem_t*) realloc(list->data - 1, sizeof(elem_t) * (newCapacity + 1));
     if (tempData == NULL)
     {
         DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
     }
 
-    int* tempNext = (int*) calloc(sizeof(int), newCapacity);
+    int* tempNext = (int*) realloc(list->next - 1, sizeof(int) * (newCapacity + 1));
     if (tempData == NULL)
     {
         free(tempData);
         DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
     }
 
-    int* tempPrev = (int*) calloc(sizeof(int), newCapacity);
+    int* tempPrev = (int*) realloc(list->prev - 1, sizeof(int) * (newCapacity + 1));
     if (tempPrev == NULL)
     {
         free(tempData);
@@ -225,20 +276,71 @@ DLL_Error listPushBack(List* list, elem_t value)
         DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
     }
 
-    list->data = tempData;
-    list->next = tempNext;
-    list->prev = tempPrev;
+    list->data = tempData + 1;
+    list->next = tempNext + 1;
+    list->prev = tempPrev + 1;
 
     // Fill in arrays with info.
-    for (int i = list->free; i < newCapacity; i++)
+    for (size_t i = list->listInfo.capacity - 1; i < newCapacity; i++)
     {
+        list->data[i] = DLL_DATA_POISON;
         list->prev[i] = DLL_PREV_POISON;
-        list->next[i] = i + 1;
+        list->next[i] = (int) i + 1;
     }
+
     list->next[newCapacity - 1] = -1;
 
     list->listInfo.capacity = newCapacity;
 
     DUMP_PRINT("listChangeCapacity() success.\n");
+    return DLL_ERR_OK;
+}
+
+
+DLL_Error listLinearize(List* list)
+{
+    DUMP_PRINT("listLinearize() started.\n");
+
+    elem_t* newData = NULL;
+    int*    newPrev = NULL;
+    int*    newNext = NULL;
+
+    if (allocListMem(&newData, &newPrev, &newNext, list->listInfo.capacity) != DLL_ERR_OK)
+        DUMP_AND_RETURN_ERROR(DLL_ERR_MEMORY_ALLOCATION_FAILURE);
+
+    int oldIndex = list->next[-1];
+    size_t newIndex = 0;
+    while (list->next[oldIndex] != -1)
+    {
+        newData[newIndex] = list->data[oldIndex];
+        newIndex++;
+        oldIndex = list->next[oldIndex];
+    }
+
+    for (size_t i = 0; i < newIndex + 1; i++)
+    {
+        newNext[i] = (int) i + 1;
+        newPrev[i] = (int) i - 1;
+    }
+    for (size_t i = newIndex + 1; i < list->listInfo.capacity; i++)
+    {
+        newNext[i] = (int) i + 1;
+        newPrev[i] = DLL_PREV_POISON;
+    }
+
+    free(list->data - 1);
+    free(list->next - 1);
+    free(list->prev - 1);
+
+    list->data = newData;
+    list->next = newNext;
+    list->prev = newPrev;
+
+    list->next[-1] = 0;
+    list->prev[-1] = (int) newIndex;
+
+    list->next[newIndex] = -1;
+    list->next[list->listInfo.capacity - 1] = -1;
+
     return DLL_ERR_OK;
 }
