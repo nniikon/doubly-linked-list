@@ -18,14 +18,19 @@ float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,$\
 object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,$\
 undefined,unreachable,vla-bound,vptr
 
-BUILD_DIR := build
+SRC_DIR = source
+BUILD_DIR = ../build
 
-EXEC_NAME := ./build/list
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 
-all: 
-	@$(MAKE) -C ./ -f Makelist
-	@$(MAKE) -C ./lib -f Makelib
-	@g++ $(CFLAGS) -o $(EXEC_NAME) $(wildcard $(BUILD_DIR)/*.o)
+all: $(BUILD_DIR) $(OBJS)
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@g++ $^ $(CFLAGS) -c -o $@
+
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
 
 clean:
-	@$(MAKE) clean -C ./ -f Makelist
+	@rm -rf $(BUILD_DIR)

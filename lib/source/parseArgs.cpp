@@ -1,4 +1,4 @@
-#include "parseArgs.h"
+#include "../include/parseArgs.h"
 
 static void printOptName(StrArgument* arg)
 {
