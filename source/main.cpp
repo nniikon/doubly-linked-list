@@ -1,19 +1,10 @@
 #include "../include/DLL.h"
 #include "../include/DLL_htmlDump.h"
-#include "../lib/include/parseArgs.h"
 
 
 int main(int argc, char** argv)
 {
     const char* logFileName = NULL;
-    StrArgument strArgs[] = 
-    {
-        {"-o", "log_file", "The file all logs will be written to", &logFileName, false},
-    };
-    ConsoleArgs args = {sizeof(strArgs) / sizeof(strArgs[0]), strArgs};
-
-    if (!parseArgs(argc, argv, &args))
-        return -1;
 
     List list = {};
 
