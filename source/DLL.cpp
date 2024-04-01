@@ -6,7 +6,6 @@
 
 static FILE* logFile = stderr;
 
-
 const char *const DLL_ERROR_MSG[] =
 {
     #define DEF_ERR(err, str) str,
@@ -23,7 +22,7 @@ const char *const DLL_ERROR_MSG[] =
     } while (0)                                             \
 
 
-#ifndef LIST_RELEASE
+#ifndef NDEBUG 
     #define VERIFY_DUMP_RETURN_ERROR(list)              \
     do                                                  \
     {                                                   \
