@@ -2,9 +2,6 @@
 #define DLL_HD5H3KR6V4_H
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <inttypes.h>
-#include <assert.h>
 #include "DLL_config.h"
 
 enum DLL_Error 
@@ -40,28 +37,18 @@ struct List
     FILE* logFile;
 };
 
-#define listConstuctor(list, file) listConstuctor_internal(list, file, DLL_InitInfo{__FILE__, #list, __FUNCTION__, __LINE__})
-
+#define listConstuctor(list, file)\
+    listConstuctor_internal(list, file, DLL_InitInfo{__FILE__, #list, __FUNCTION__, __LINE__})
 
 DLL_Error listConstuctor_internal(List* list, FILE* logFile, DLL_InitInfo info);
-
-DLL_Error listDestructor(List* list);
-
-DLL_Error listVerify(List* list);
-
-DLL_Error listDelete(List* list, int index);
-
-DLL_Error listInsertAfter(List* list, int index, elem_t value);
-
-DLL_Error listInsertBefore(List* list, int index, elem_t value);
-
-DLL_Error listPushFront(List* list, elem_t value);
-
-DLL_Error listPushBack(List* list, elem_t value);
-
-// FIX5: make static, move to .cpp //
-DLL_Error listChangeCapacity(List* list, float multiplier);
-
-DLL_Error listLinearize(List* list);
+DLL_Error listDestructor         (List* list);
+DLL_Error listVerify             (List* list);
+DLL_Error listDelete             (List* list, int index);
+DLL_Error listInsertAfter        (List* list, int index, elem_t value);
+DLL_Error listInsertBefore       (List* list, int index, elem_t value);
+DLL_Error listPushFront          (List* list, elem_t value);
+DLL_Error listPushBack           (List* list, elem_t value);
+DLL_Error listChangeCapacity     (List* list, float multiplier);
+DLL_Error listLinearize          (List* list);
 
 #endif

@@ -11,4 +11,7 @@ const int DLL_DATA_POISON = -3565;
 typedef int elem_t;
 #define ELEM_FORMAT "%d"
 
+#define DUMP_DEBUG
+#define LIST_RELEASE 
+
 #endif

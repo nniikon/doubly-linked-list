@@ -1,7 +1,11 @@
 #include "../include/DLL.h"
 
-#define DUMP_DEBUG
-#include "../lib/include/dump.h"
+#include "../lib/logs.h"
+#include <stdlib.h>
+
+
+static FILE* logFile = stderr;
+
 
 const char *const DLL_ERROR_MSG[] =
 {
@@ -11,12 +15,12 @@ const char *const DLL_ERROR_MSG[] =
 };
 
 
-#define DUMP_AND_RETURN_ERROR(err)                                  \
-    do                                                              \
-    {                                                               \
-        DUMP_ERROR("LIST ERROR: %s\n", DLL_ERROR_MSG[(int)err]);    \
-        return err;                                                 \
-    } while (0)                                                     \
+#define DUMP_AND_RETURN_ERROR(err)                          \
+    do                                                      \
+    {                                                       \
+        LOGF_ERR(logFile, "%s\n", DLL_ERROR_MSG[(int)err]); \
+        return err;                                         \
+    } while (0)                                             \
 
 
 #ifndef LIST_RELEASE
@@ -30,7 +34,7 @@ const char *const DLL_ERROR_MSG[] =
         }                                               \
     } while (0)
 #else
-    #define LIST_VERIFY_DUMP_RETURN_ERROR(list) do {} while(0)
+    #define VERIFY_DUMP_RETURN_ERROR(list) do {} while(0)
 #endif
 
 static bool isInCorrectRange(List* list, int var)
@@ -63,7 +67,7 @@ DLL_Error listVerify(List* list)
 
 static DLL_Error allocListMem(elem_t** data, int** prev, int** next, unsigned int capacity)
 {
-    DUMP_PRINT("allocListMem() started\n");
+    LOGF(logFile, "allocListMem() started\n");
 
     *data = (elem_t*) calloc(sizeof(data[0]), capacity + 1);
     if (data == NULL)
@@ -94,11 +98,13 @@ static DLL_Error allocListMem(elem_t** data, int** prev, int** next, unsigned in
 }
 
 
-DLL_Error listConstuctor_internal(List* list, FILE* logFile, DLL_InitInfo info)
+DLL_Error listConstuctor_internal(List* list, FILE* newLogFile, DLL_InitInfo info)
 {
-    DUMP_PRINT("%s was initialized in %s function %s[%d]\n", 
+    logFile = newLogFile;
+
+    LOGF(logFile, "%s was initialized in %s function %s[%d]\n", 
                 info.varName, info.fileName, info.funcName, info.lineNum);
-    DUMP_PRINT("listConstuctor() started.\n");
+    LOGF(logFile, "listConstuctor() started.\n");
 
     if (list == NULL)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
@@ -126,14 +132,14 @@ DLL_Error listConstuctor_internal(List* list, FILE* logFile, DLL_InitInfo info)
     list->listInfo.size     = 0;
     list->listInfo.isSorted = true;
 
-    DUMP_PRINT("listConstuctor() success.\n");
+    LOGF(logFile, "listConstuctor() success.\n");
     return DLL_ERR_OK;
 }
 
 
 DLL_Error listDestructor(List* list)
 {
-    DUMP_PRINT("listDestructor() started.\n");
+    LOGF(logFile, "listDestructor() started.\n");
     if (list == NULL) 
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
 
@@ -146,7 +152,7 @@ DLL_Error listDestructor(List* list)
     if (list->data != NULL)
         free(list->data - 1);
 
-    DUMP_PRINT("listDestructor() success.\n");
+    LOGF(logFile, "listDestructor() success.\n");
 
     return DLL_ERR_OK;
 }
@@ -154,7 +160,7 @@ DLL_Error listDestructor(List* list)
 
 DLL_Error listDelete(List* list, int index)
 {
-    DUMP_PRINT("listDelete(%d) started.\n", index);
+    LOGF(logFile, "listDelete(%d) started.\n", index);
     if (list == NULL)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
     if (index <= 0)
@@ -181,7 +187,7 @@ DLL_Error listDelete(List* list, int index)
 
 DLL_Error listInsertAfter(List* list, int index, elem_t value)
 {
-    DUMP_PRINT("listInsertAfter(%d, " ELEM_FORMAT ") started.\n", index, value);
+    LOGF(logFile, "listInsertAfter(%d, " ELEM_FORMAT ") started.\n", index, value);
     if (list == NULL)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
     VERIFY_DUMP_RETURN_ERROR(list);
@@ -204,7 +210,7 @@ DLL_Error listInsertAfter(List* list, int index, elem_t value)
     if (index == list->prev[-1])
     {
         list->prev[-1] = freeIndex;
-        DUMP_VALUE("TAIL: %d\n", list->prev[-1]);
+        LOGF_COLOR(logFile, green, "TAIL: %d\n", list->prev[-1]);
     }
 
     return DLL_ERR_OK;
@@ -213,7 +219,7 @@ DLL_Error listInsertAfter(List* list, int index, elem_t value)
 
 DLL_Error listInsertBefore(List* list, int index, elem_t value)
 {
-    DUMP_PRINT("listInsertBefore(%d, " ELEM_FORMAT ") started.\n", index, value);
+    LOGF(logFile, "listInsertBefore(%d, " ELEM_FORMAT ") started.\n", index, value);
     if (list == NULL)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
     VERIFY_DUMP_RETURN_ERROR(list);
@@ -229,7 +235,7 @@ DLL_Error listInsertBefore(List* list, int index, elem_t value)
 
 DLL_Error listPushFront(List* list, elem_t value)
 {
-    DUMP_PRINT("listPushFront(" ELEM_FORMAT ") started.\n", value);
+    LOGF(logFile, "listPushFront(" ELEM_FORMAT ") started.\n", value);
     if (list == NULL)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
     VERIFY_DUMP_RETURN_ERROR(list);
@@ -240,7 +246,7 @@ DLL_Error listPushFront(List* list, elem_t value)
 
 DLL_Error listPushBack(List* list, elem_t value)
 {
-    DUMP_PRINT("listPushFront(" ELEM_FORMAT ") started.\n", value);
+    LOGF(logFile, "listPushFront(" ELEM_FORMAT ") started.\n", value);
     if (list == NULL)
         DUMP_AND_RETURN_ERROR(DLL_ERR_NULL_LIST_PASSED);
     VERIFY_DUMP_RETURN_ERROR(list);
@@ -251,7 +257,7 @@ DLL_Error listPushBack(List* list, elem_t value)
 
 /*static*/ DLL_Error listChangeCapacity(List* list, float multiplier)
 {
-    DUMP_PRINT("listChangeCapacity(%f) started.\n", multiplier);
+    LOGF(logFile, "listChangeCapacity(%f) started.\n", multiplier);
 
     unsigned int newCapacity = (unsigned int)((float) list->listInfo.capacity * multiplier);
 
@@ -292,14 +298,14 @@ DLL_Error listPushBack(List* list, elem_t value)
 
     list->listInfo.capacity = newCapacity;
 
-    DUMP_PRINT("listChangeCapacity() success.\n");
+    LOGF(logFile, "listChangeCapacity() success.\n");
     return DLL_ERR_OK;
 }
 
 
 DLL_Error listLinearize(List* list)
 {
-    DUMP_PRINT("listLinearize() started.\n");
+    LOGF(logFile, "listLinearize() started.\n");
 
     elem_t* newData = NULL;
     int*    newPrev = NULL;
